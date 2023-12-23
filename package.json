@@ -24,6 +24,7 @@
     "@electron-toolkit/utils": "^1.0.2",
     "@ffmpeg/core": "^0.11.0",
     "@ffmpeg/ffmpeg": "^0.11.6",
+    "dayjs": "^1.11.10",
     "nodemailer": "^6.9.3",
     "react-hot-toast": "^2.4.1",
     "react-timer-hook": "^3.0.6",

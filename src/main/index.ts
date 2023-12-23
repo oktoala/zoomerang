@@ -9,6 +9,7 @@ import { exec } from 'child_process';
 import { emailTemplate } from './email';
 import { MailOptions } from 'nodemailer/lib/sendmail-transport';
 import { emailTransport } from './nodemailer';
+import dayjs from 'dayjs';
 
 function createWindow(): void {
   // Create the browser window.
@@ -29,27 +30,49 @@ function createWindow(): void {
   ipcMain.handle('make-video', async (_, chunk: ArrayBuffer, num: number) => {
     // await ffmpeg.load();
     const vidWrite = `video-${num ?? 1}.webm`;
+    const output = `videoutput-${num ?? 1}.webm`;
+    const output_faster = `output_faster-${num ?? 1}.webm`;
     const vidLoopWrite = `videoLoop-${num ?? 1}.webm`;
 
     const buffer = Buffer.from(chunk);
 
-    console.log(app.getPath('userData'));
-
     const userPath = app.getPath('userData');
+
+    const outputPath = path.join(userPath, output);
+
+    const outputFasterPath = path.join(userPath, output_faster);
+    const outputTxt = path.join(userPath, `output-${num ?? 1}.txt`);
+
     const urlVideo = path.join(userPath, vidWrite);
     const urlLoopVideo = path.join(userPath, vidLoopWrite);
 
     await fs.promises.writeFile(urlVideo, buffer);
+    await fs.promises.writeFile(
+      outputTxt,
+      `file '${outputFasterPath}'\nfile '${outputFasterPath}'\nfile '${outputFasterPath}'\n`
+    );
 
     // const filter = '[0]reverse[r];[0][r]concat,loop=4:200,setpts=N/24/TB';
     // const filter = '[0]reverse[r];[0][r][0]concat=n=4,setpts=0.5*PTS';
-    const filter = '[0]reverse[r];[0][r]concat,loop=3:180,setpts=N/18/TB';
-    const { stdout, stderr } = await execPromise(
-      `ffmpeg -y -i ${urlVideo} -filter_complex "${filter}" ${urlLoopVideo}`
+    const filter = '[0:v]reverse[r];[0:v][r]concat=n=2:v=1[outv]" -map "[outv]';
+    // Make the boomerang
+    const { stdout: out1, stderr: err1 } = await execPromise(
+      `ffmpeg -i ${urlVideo} -filter_complex "${filter}" ${outputPath}`
+    );
+    console.log(out1, err1);
+
+    // Make it faster
+    const { stdout: out2, stderr: err2 } = await execPromise(
+      `ffmpeg -i ${outputPath} -vf "setpts=1/2*PTS" ${outputFasterPath}`
+    );
+    console.log(out2, err2);
+
+    // Make 3 sequence
+    const { stdout: out3, stderr: err3 } = await execPromise(
+      `ffmpeg -f concat -safe 0 -i ${outputTxt} -c copy ${urlLoopVideo}`
     );
 
-    console.log(`stdout: ${stdout}`);
-    console.log(`stderr: ${stderr}`);
+    console.log(out3, err3);
 
     // ffmpeg.stdout.on('data', (data) => {
     //   console.log(`stdout: ${data}`);
@@ -74,18 +97,17 @@ function createWindow(): void {
     };
   });
 
-  ipcMain.handle('sendEmail', async (_, name: string, email: string) => {
+  ipcMain.handle('combine', async () => {
     const pathUserData = app.getPath('userData');
-    const nama = name.replace(/\s/g, '-');
-    console.log(nama, email);
-    const pathOutputFinal = path.join(pathUserData, `${nama}-${email}.webm`);
-    const pathOutputFinalMp4 = path.join(pathUserData, `${nama}-${email}.mp4`);
+    const nama = dayjs().format('YYYY-MM-DD.HH:mm:ss');
+    const pathOutputFinal = path.join(pathUserData, `${nama}.webm`);
+    const pathOutputFinalMp4 = path.join(pathUserData, `${nama}.mp4`);
 
     const pathVidLoop1 = path.join(pathUserData, `videoLoop-1.webm`);
     const pathVidLoop2 = path.join(pathUserData, `videoLoop-2.webm`);
 
     const { stdout, stderr } = await execPromise(
-      `ffmpeg -y -i ${pathVidLoop1} -i ${pathVidLoop2} -filter_complex vstack ${pathOutputFinal}`
+      `ffmpeg -y -i ${pathVidLoop1} -i ${pathVidLoop2} -filter_complex "[0:v][1:v]vstack=inputs=2:shortest=1[outv]" -map "[outv]" ${pathOutputFinal}`
     );
     console.log(stdout);
     console.log(stderr);
@@ -106,6 +128,17 @@ function createWindow(): void {
       return 'Gagal, File .mp4 Belum ada';
     }
 
+    const arrBuff = Buffer.from(pathOutputFinalMp4, 'binary').toString('base64');
+
+    return {
+      nama,
+      path: arrBuff
+    };
+  });
+
+  ipcMain.handle('sendEmail', async (_, nameFile: string, name, email: string) => {
+    const pathUserData = app.getPath('userData');
+    const pathOutputFinalMp4 = path.join(pathUserData, `${nameFile}.mp4`);
     const message: MailOptions = {
       from: 'noreply@hktekno.com',
       to: email,
@@ -114,7 +147,7 @@ function createWindow(): void {
       html: emailTemplate(name),
       attachments: [
         {
-          filename: `${nama}-boomerang.mp4`,
+          filename: `${name}.mp4`,
           content: createReadStream(pathOutputFinalMp4)
         }
       ]
@@ -159,8 +192,8 @@ app.whenReady().then(() => {
 
   createWindow();
 
-  app.on('activate', function() {
-    // On macOS it's common to re-create a window in the app when the
+  app.on('activate', function () {
+    // On macOS it's common o re-create a window in the app when the
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
