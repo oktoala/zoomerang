@@ -1,7 +1,6 @@
 import Webcam from 'react-webcam';
 import { Dispatch, useCallback, useRef, useState } from 'react';
 import { useTimer } from 'react-timer-hook';
-import Sound from '../assets/sound.mp3';
 
 const WebcamVid = ({
   videoConstraints,
@@ -17,11 +16,11 @@ const WebcamVid = ({
   const webcamRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const [capturing, setCapturing] = useState(false);
-  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+  const [, setRecordedChunks] = useState<Blob[]>([]);
   const [isMakingLoopVideo, setIsMakingLoopVideo] = useState(false);
 
   const date = new Date();
-  date.setSeconds(date.getSeconds() + 2);
+  date.setSeconds(date.getSeconds() + 3);
 
   const makeLoopVideo = async (data: Blob[]) => {
     setIsMakingLoopVideo(true);
@@ -37,7 +36,7 @@ const WebcamVid = ({
     setIsMakingLoopVideo(false);
   };
 
-  const { seconds, start } = useTimer({
+  const { seconds, start, restart } = useTimer({
     autoStart: false,
     expiryTimestamp: date,
     onExpire: useCallback(async () => {
@@ -78,8 +77,9 @@ const WebcamVid = ({
     <div className="flex items-center">
       <div className="relative">
         <div
-          className={`${isMakingLoopVideo ? 'flex' : 'hidden'
-            } absolute top-0 z-40 justify-center items-center w-full h-full bg-gray-800/40`}
+          className={`${
+            isMakingLoopVideo ? 'flex' : 'hidden'
+          } absolute top-0 z-40 justify-center items-center w-full h-full bg-gray-800/40`}
         >
           <div role="status">
             <svg
@@ -102,9 +102,10 @@ const WebcamVid = ({
           </div>
         </div>
         {videoURL ? (
-          <video width={720} height={540} src={videoURL} autoPlay controls loop />
+          <video width={720} height={540} src={videoURL} autoPlay loop />
         ) : (
           <Webcam
+            controls={false}
             width={720}
             height={540}
             audio={false}
@@ -135,7 +136,12 @@ const WebcamVid = ({
           </button>
         )}
         {videoURL && (
-          <button onClick={() => setVideoUrl(undefined)}>
+          <button
+            onClick={() => {
+              setVideoUrl(undefined);
+              restart(date);
+            }}
+          >
             <svg
               className="fill-red-500 hover:fill-red-600"
               xmlns="http://www.w3.org/2000/svg"

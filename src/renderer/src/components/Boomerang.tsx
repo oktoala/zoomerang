@@ -32,6 +32,8 @@ const Boomerang = () => {
     [setDevices]
   );
 
+  console.log(!filename, isSend, !vidUrl1, !vidUrl2);
+
   useEffect(() => {
     navigator.mediaDevices.enumerateDevices().then(handleDevices);
   }, [handleDevices]);
@@ -140,10 +142,11 @@ const Boomerang = () => {
               disabled={!vidUrl1 && !vidUrl2}
               onClick={async () => {
                 setIsBuild(true);
-                const { name, path } = await window.electron.ipcRenderer.invoke('combine');
+                const { nama, path } = await window.electron.ipcRenderer.invoke('combine');
+                console.log(nama, path);
 
-                setFilename(name);
-                setPathVid(path);
+                setFilename(nama);
+                setPathVid(URL.createObjectURL(new Blob([path], { type: 'video/mp4' })));
                 setIsBuild(false);
               }}
               type="button"
@@ -153,7 +156,13 @@ const Boomerang = () => {
             </button>
           </div>
         </form>
-        <div className="mt-5">{pathVid && <video src={pathVid} />}</div>
+        <div className="mt-5">
+          {pathVid && (
+            <video autoPlay loop className="h-52">
+              <source type="video/mp4" src={pathVid} />
+            </video>
+          )}
+        </div>
       </div>
       <div className="flex flex-col basis-2/3">
         <WebcamVid

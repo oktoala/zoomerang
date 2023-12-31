@@ -34,9 +34,16 @@ function createWindow(): void {
     const output_faster = `output_faster-${num ?? 1}.webm`;
     const vidLoopWrite = `videoLoop-${num ?? 1}.webm`;
 
+    console.log('1');
     const buffer = Buffer.from(chunk);
 
     const userPath = app.getPath('userData');
+    try {
+      await execPromise(`rm ${path.join(userPath, `video*${num ?? 1}*`)} `);
+      await execPromise(`rm  ${path.join(userPath, `output*${num ?? 1}*`)}`);
+    } catch (e) {
+      console.log(e);
+    }
 
     const outputPath = path.join(userPath, output);
 
@@ -46,7 +53,9 @@ function createWindow(): void {
     const urlVideo = path.join(userPath, vidWrite);
     const urlLoopVideo = path.join(userPath, vidLoopWrite);
 
+    console.log('2');
     await fs.promises.writeFile(urlVideo, buffer);
+    console.log('3');
     await fs.promises.writeFile(
       outputTxt,
       `file '${outputFasterPath}'\nfile '${outputFasterPath}'\nfile '${outputFasterPath}'\n`
@@ -54,13 +63,15 @@ function createWindow(): void {
 
     // const filter = '[0]reverse[r];[0][r]concat,loop=4:200,setpts=N/24/TB';
     // const filter = '[0]reverse[r];[0][r][0]concat=n=4,setpts=0.5*PTS';
-    const filter = '[0:v]reverse[r];[0:v][r]concat=n=2:v=1[outv]" -map "[outv]';
+    const filter = '"[0:v]reverse[r];[0:v][r]concat=n=2:v=1[outv]" -map "[outv]"';
+    console.log('4');
     // Make the boomerang
     const { stdout: out1, stderr: err1 } = await execPromise(
-      `ffmpeg -i ${urlVideo} -filter_complex "${filter}" ${outputPath}`
+      `ffmpeg -i ${urlVideo} -filter_complex ${filter} ${outputPath}`
     );
     console.log(out1, err1);
 
+    console.log('5');
     // Make it faster
     const { stdout: out2, stderr: err2 } = await execPromise(
       `ffmpeg -i ${outputPath} -vf "setpts=1/2*PTS" ${outputFasterPath}`
@@ -118,7 +129,8 @@ function createWindow(): void {
     }
 
     // const webm2mp4 = `ffmpeg -y -i ${pathOutputFinal} -c:v copy ${pathOutputFinalMp4}`
-    const webm2mp4 = `ffmpeg -i ${pathOutputFinal} -c:v libx264 -profile:v main -vf format=yuv420p -c:a aac -movflags +faststart ${pathOutputFinalMp4}`;
+    // const option = '-c:v libx264 -profile:v main -vf format=yuv420p -c:a aac -movflags +faststart';
+    const webm2mp4 = `ffmpeg -i ${pathOutputFinal} -c:v copy ${pathOutputFinalMp4}`;
 
     const d = await execPromise(webm2mp4);
     console.log(d.stdout, d.stderr);
@@ -128,11 +140,12 @@ function createWindow(): void {
       return 'Gagal, File .mp4 Belum ada';
     }
 
-    const arrBuff = Buffer.from(pathOutputFinalMp4, 'binary').toString('base64');
+    const mp4 = await fs.promises.readFile(pathOutputFinalMp4);
+    // const url = URL.createObjectURL(new Blob([mp4.buffer], { type: 'video/mp4' }));
 
     return {
       nama,
-      path: arrBuff
+      path: mp4.buffer
     };
   });
 
