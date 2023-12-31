@@ -42,7 +42,7 @@ const Boomerang = () => {
     <>
       <Toaster />
       <div className="flex flex-col justify-center items-center h-1/2 basis-1/3">
-        <h3 className="mb-5 text-3xl font-bold">Doublmerang</h3>
+        <h3 className="mb-5 text-3xl font-bold">zoomerang</h3>
         <select
           onChange={(e) => {
             setVideoConstraints((o) => ({

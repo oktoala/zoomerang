@@ -130,7 +130,7 @@ function createWindow(): void {
 
     // const webm2mp4 = `ffmpeg -y -i ${pathOutputFinal} -c:v copy ${pathOutputFinalMp4}`
     // const option = '-c:v libx264 -profile:v main -vf format=yuv420p -c:a aac -movflags +faststart';
-    const webm2mp4 = `ffmpeg -i ${pathOutputFinal} -c:v copy ${pathOutputFinalMp4}`;
+    const webm2mp4 = `ffmpeg -i ${pathOutputFinal} -vcodec libx264 ${pathOutputFinalMp4}`;
 
     const d = await execPromise(webm2mp4);
     console.log(d.stdout, d.stderr);
